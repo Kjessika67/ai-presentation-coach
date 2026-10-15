@@ -1,0 +1,23 @@
+{
+  "transcript": "Good morning everyone. Today I will discuss cybersecurity. Strong passwords and multi-factor authentication help protect accounts. Thank you.",
+  "speaking_time": 38.5,
+  "speaking_time_formatted": "00:38",
+  "words_per_minute": 126,
+  "pause_count": 2,
+  "pauses": [
+    {
+      "duration_seconds": 2.4
+    }
+  ],
+  "filler_word_count": 1,
+  "filler_words": {
+    "um": 1
+  },
+  "timestamps": [],
+  "language": "English",
+  "language_code": "en-US",
+  "recording": {
+    "available": false,
+    "mime_type": null
+  }
+}
