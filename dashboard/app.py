@@ -24,7 +24,66 @@ st.markdown(
 )
 
 st.title("🎤 AI Presentation Coach")
+
 st.caption("One report for speech, body language, and presentation content.")
+
+with st.expander("Import real module JSON files", expanded=False):
+    st.caption(
+        "Upload JSON output exported from the speech, computer-vision, and/or NLP "
+        "modules. You can upload one module now and add the others to the same session later."
+    )
+    import_name = st.text_input("Presenter name", value="Jessika", key="import_presenter_name")
+    import_topic = st.text_input("Presentation topic", value="", key="import_presentation_topic")
+    speech_json_file = st.file_uploader("Speech module JSON", type=["json"], key="import_speech_json")
+    cv_json_file = st.file_uploader("Computer-vision module JSON", type=["json"], key="import_cv_json")
+    nlp_json_file = st.file_uploader("NLP module JSON", type=["json"], key="import_nlp_json")
+    import_clicked = st.button(
+        "Create report from uploaded JSON",
+        key="create_imported_report",
+        use_container_width=True,
+    )
+
+if import_clicked:
+    uploaded_modules = {}
+    import_errors = []
+    for module_name, uploaded_file in (
+        ("speech", speech_json_file),
+        ("computer_vision", cv_json_file),
+        ("nlp", nlp_json_file),
+    ):
+        if uploaded_file is None:
+            continue
+        try:
+            parsed = json.loads(uploaded_file.getvalue().decode("utf-8-sig"))
+            if not isinstance(parsed, dict):
+                import_errors.append(f"{uploaded_file.name} must contain one JSON object.")
+            else:
+                uploaded_modules[module_name] = parsed
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            import_errors.append(f"Could not read {uploaded_file.name} as JSON: {exc}")
+
+    if import_errors:
+        for import_error in import_errors:
+            st.error(import_error)
+    elif not uploaded_modules:
+        st.warning("Upload at least one module JSON file first.")
+    else:
+        import_payload = {
+            "presenter_name": import_name.strip() or "Presenter",
+            "topic": import_topic.strip() or "Untitled presentation",
+            **uploaded_modules,
+        }
+        try:
+            response = requests.post(
+                f"{DEFAULT_API_URL.rstrip('/')}/api/sessions",
+                json=import_payload,
+                timeout=15,
+            )
+            response.raise_for_status()
+            st.success("Report imported successfully.")
+            st.rerun()
+        except requests.RequestException as exc:
+            st.error(f"Could not import the module report: {exc}")
 
 with st.sidebar:
     st.header("Backend connection")
@@ -174,6 +233,9 @@ with cv_tab:
         st.bar_chart(pd.DataFrame(cv_rows).set_index("Metric"), y="Score")
     else:
         st.info("No computer-vision metrics submitted yet.")
+    if isinstance(cv.get("cv_module_report"), dict):
+        with st.expander("View detailed computer-vision measurements"):
+            st.json(cv["cv_module_report"])
     st.caption("Agree with the CV teammate that these scores use a 0–100 scale, with higher meaning better.")
 
 with nlp_tab:
@@ -191,6 +253,8 @@ with nlp_tab:
     ]
     if nlp_rows:
         st.bar_chart(pd.DataFrame(nlp_rows).set_index("Metric"), y="Score")
+    elif isinstance(nlp.get("content_score"), (int, float)) and not isinstance(nlp.get("content_score"), bool):
+        st.metric("Content quality score", f"{float(nlp['content_score']):.1f}/100")
     else:
         st.info("No NLP metrics submitted yet.")
 
