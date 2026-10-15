@@ -74,8 +74,9 @@ if import_clicked:
             **uploaded_modules,
         }
         try:
+            import_api_url = st.session_state.get("backend_api_url", DEFAULT_API_URL).strip().rstrip("/")
             response = requests.post(
-                f"{DEFAULT_API_URL.rstrip('/')}/api/sessions",
+                f"{import_api_url}/api/sessions",
                 json=import_payload,
                 timeout=15,
             )
@@ -87,7 +88,11 @@ if import_clicked:
 
 with st.sidebar:
     st.header("Backend connection")
-    api_url = st.text_input("Backend API URL", value=DEFAULT_API_URL).strip().rstrip("/")
+    api_url = st.text_input(
+        "Backend API URL",
+        value=DEFAULT_API_URL,
+        key="backend_api_url",
+    ).strip().rstrip("/")
     if st.button("Check backend", use_container_width=True):
         try:
             check = requests.get(f"{api_url}/api/health", timeout=3)
