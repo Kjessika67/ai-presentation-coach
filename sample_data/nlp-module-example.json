@@ -1,0 +1,27 @@
+{
+  "content_score": 81,
+  "combined_score": 80,
+  "strengths": [
+    "The speech has a clear introduction and stays on topic."
+  ],
+  "areas_to_improve": [
+    "Add a more concrete example."
+  ],
+  "suggestions": [
+    "Add one real-world example.",
+    "End with one clear action for the audience."
+  ],
+  "details": {
+    "filler_score": 92,
+    "clarity_score": 84,
+    "topic_relevance": 78,
+    "examples": {
+      "has_examples": false
+    },
+    "structure": {
+      "introduction": true,
+      "main_body": true,
+      "conclusion": true
+    }
+  }
+}
