@@ -17,6 +17,8 @@ from typing import Any
 
 from flask import Flask, jsonify, request
 
+from module_adapters import normalize_module_payload
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.environ.get("PRESENTATION_COACH_DB", BASE_DIR / "data" / "presentation_sessions.db"))
 
@@ -75,7 +77,7 @@ def numeric_value(value: Any, field: str, minimum: float = 0, maximum: float | N
 def validate_module(module_name: str, value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError(f"'{module_name}' must be a JSON object.")
-    result = dict(value)
+    result = normalize_module_payload(module_name, value)
 
     if module_name == "speech":
         if "transcript" in result and not isinstance(result["transcript"], str):
@@ -87,7 +89,10 @@ def validate_module(module_name: str, value: Any) -> dict[str, Any]:
                     raise ValueError(f"'{field}' must be a whole number.")
                 result[field] = int(number) if number.is_integer() else round(number, 2)
     else:
-        for field in SCORE_FIELDS[module_name]:
+        score_fields = SCORE_FIELDS[module_name]
+        if module_name == "nlp":
+            score_fields = score_fields + ("content_score",)
+        for field in score_fields:
             if field in result and result[field] is not None:
                 result[field] = round(numeric_value(result[field], field, maximum=100), 2)
         if module_name == "nlp" and "content_suggestions" in result:
@@ -130,10 +135,16 @@ def calculate_speech_score(speech: dict[str, Any]) -> float | None:
 
 
 def calculate_scores(speech: dict[str, Any], cv: dict[str, Any], nlp: dict[str, Any]) -> dict[str, float | None]:
+    native_content_score = nlp.get("content_score")
+    if isinstance(native_content_score, (int, float)) and not isinstance(native_content_score, bool):
+        nlp_score = round(float(native_content_score), 2)
+    else:
+        nlp_score = average_score(nlp, SCORE_FIELDS["nlp"])
+
     scores: dict[str, float | None] = {
         "speech_score": calculate_speech_score(speech),
         "cv_score": average_score(cv, SCORE_FIELDS["computer_vision"]),
-        "nlp_score": average_score(nlp, SCORE_FIELDS["nlp"]),
+        "nlp_score": nlp_score,
     }
     available = [score for score in scores.values() if score is not None]
     scores["overall_score"] = round(mean(available), 2) if available else None
