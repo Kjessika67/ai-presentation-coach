@@ -13,6 +13,8 @@ ai-presentation-coach/
 │   └── module_adapters.py
 ├── dashboard/
 │   └── app.py
+├── tests/
+│   └── test_module_adapters.py
 ├── sample_data/
 │   ├── session-example.json
 │   ├── speech-module-example.json
@@ -133,6 +135,16 @@ Modules can also submit results individually using PATCH and the same session ID
 - Pause count and speaking duration are displayed but not included in the score.
 
 Treat the overall number as a **starter score**, not a scientifically validated rating. Review scoring weights and the computer-vision movement proxy with the team.
+
+## Run integration tests
+
+From the project root in PowerShell:
+
+~~~powershell
+python -m unittest discover -s tests -v
+~~~
+
+These tests check the field mapping for the three teammate output formats. They do not start the camera, microphone, or a live presentation.
 
 ## Troubleshooting
 
