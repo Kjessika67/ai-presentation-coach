@@ -1,0 +1,37 @@
+{
+  "eye_contact": {
+    "total_seconds": 31.1,
+    "eye_contact_pct": 63.1,
+    "face_detected_pct": 98.5
+  },
+  "posture": {
+    "total_seconds": 31.1,
+    "good_posture_pct": 53.7,
+    "avg_posture_score": 69.3,
+    "visible_pct": 100,
+    "shoulders_uneven_pct": 3.5,
+    "head_tilted_pct": 10.6,
+    "slouching_pct": 34,
+    "leaning_forward_pct": 21.1,
+    "swaying_pct": 10
+  },
+  "gestures": {
+    "total_seconds": 31.1,
+    "hands_visible_pct": 79.4,
+    "gesturing_pct": 44.9,
+    "still_pct": 34.2,
+    "fidgeting_pct": 0.3,
+    "face_touch_pct": 2.1
+  },
+  "confidence": {
+    "total_seconds": 31.1,
+    "avg_confidence": 72.5,
+    "confident_pct": 60,
+    "neutral_pct": 30,
+    "nervous_pct": 10,
+    "top_cues": [
+      "frequent blinking",
+      "gaze darting around"
+    ]
+  }
+}
