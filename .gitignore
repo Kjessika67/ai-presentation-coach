@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# AI Presentation Coach local data
+data/
+*.db
+*.sqlite
+*.sqlite3
+.env
