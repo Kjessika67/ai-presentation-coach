@@ -29,8 +29,8 @@ st.caption("One report for speech, body language, and presentation content.")
 
 with st.expander("Import real module JSON files", expanded=False):
     st.caption(
-        "Upload JSON output exported from the speech, computer-vision, and/or NLP "
-        "modules. You can upload one module now and add the others to the same session later."
+        "Upload the JSON files exported by the completed modules. Select all available module files "
+        "for this presentation before clicking to create one combined report."
     )
     import_name = st.text_input("Presenter name", value="Jessika", key="import_presenter_name")
     import_topic = st.text_input("Presentation topic", value="", key="import_presentation_topic")
