@@ -1,153 +1,71 @@
 # AI Presentation Coach
 
-Member 4 module: Flask backend, SQLite session storage, integration API, score aggregation, and Streamlit dashboard.
+**One combined report for Speech Analysis, Computer Vision and NLP feedback.** The Flask API stores modules under one Session ID in SQLite; the Streamlit dashboard shows aggregated scores, detailed analysis and report history.
 
-> **Note:** Scores are starter heuristics and are not a validated measure of presentation ability. Agree on metric definitions and score scales with all teammates before relying on the report.
+> Scores are starter heuristics, not a scientifically validated measure of presentation ability.
 
-## Project structure
+## Project team
+- **K Jessika Santhosh (Member 4 — backend integration and dashboard):** [@Kjessika67](https://github.com/Kjessika67)
+- **Chaithra S:** [@chaithra-chaii](https://github.com/chaithra-chaii)
+- **Arsha S:** [@arshasunil06-cyber](https://github.com/arshasunil06-cyber)
+- **Adhulya V:** [@adhulyav](https://github.com/adhulyav)
 
-~~~text
-ai-presentation-coach/
-├── backend/
-│   ├── app.py
-│   └── module_adapters.py
-├── dashboard/
-│   └── app.py
-├── tests/
-│   └── test_module_adapters.py
-├── sample_data/
-│   ├── session-example.json
-│   ├── speech-module-example.json
-│   ├── computer-vision-module-example.json
-│   └── nlp-module-example.json
-├── data/                 # Created automatically; local SQLite file is ignored by Git
-├── requirements.txt
-├── .env.example
-├── .gitignore
-└── README.md
-~~~
+## Modules
+- **Speech:** browser microphone capture, live transcript, speaking time, WPM, pauses and filler words.
+- **Computer Vision:** webcam eye contact, posture, gesture and confidence analysis.
+- **NLP:** content scoring, strengths, areas to improve and suggestions.
+- **Combined report:** Flask API, SQLite session history and Streamlit dashboard.
 
-## Run locally on Windows PowerShell
-
-Open PowerShell in this repository folder. You do not need VS Code.
-
-Install dependencies:
-
-~~~powershell
+## Run locally (Windows PowerShell)
+From project root, install dependencies and CV models:
+```powershell
 python -m pip install -r requirements.txt
-~~~
-
-Start the backend in **PowerShell window 1** and keep it open:
-
-~~~powershell
+python -m pip install -r computer_vision\requirements.txt
+python computer_vision\download_models.py
+```
+Start Flask in PowerShell window 1:
+```powershell
 python backend\app.py
-~~~
+```
+Open http://127.0.0.1:5000/ or Speech Analysis at http://127.0.0.1:5000/speech/. Finish speaking and click **Send results to dashboard**. NLP feedback is generated from the saved transcript.
 
-Test in a browser: http://127.0.0.1:5000/api/health
-
-Start the dashboard in **PowerShell window 2**:
-
-~~~powershell
+Start dashboard in PowerShell window 2:
+```powershell
 python -m streamlit run dashboard\app.py
-~~~
+```
+Open the Streamlit URL, normally http://localhost:8501.
 
-Open the local URL Streamlit prints, normally http://localhost:8501. Use **Create demo report** for an example; demo values do not access a microphone or webcam.
+## Save every module under the same Session ID
+1. Run Speech Analysis and click **Send results to dashboard**. Copy the Session ID shown.
+2. Run CV: `python computer_vision\analyzer.py`. Press **C** to calibrate and **Q** to finish. The analyzer saves `data/computer_vision_report.json`.
+3. In Streamlit, expand **Import or attach module results**, choose **Attach to an existing session ID**, paste that ID, upload the CV JSON and click **Attach results to this session**.
+4. The dashboard updates the existing session; it does not create a duplicate. Speech and NLP remain under the original ID.
 
-## Import results from Member 1, 2, and 3
+For a new report from JSON exports, upload all available module files and choose **Create a new combined report**.
 
-The teammate implementations are in a separate repository and currently produce different output formats. This integration branch adds backend/module_adapters.py to normalize their outputs, and an **Import real module JSON files** expander on the dashboard.
-
-1. Run the speech, computer-vision, and/or NLP module and export its output as a .json file. Each file must contain one JSON object.
-2. In the Streamlit dashboard, open **Import real module JSON files**.
-3. Enter the presenter and topic, then upload all module JSON files available for this presentation.
-4. Click **Create report from uploaded JSON**. A report is created for the uploaded module(s), saved to SQLite, and shown with the other reports in the dashboard.
-
-To create one combined report, select all JSON files for that presentation in the same import action. Importing just one module creates a report with that module's results and leaves the other sections empty.
-
-### Supported source formats
-
-**Member 1 — Speech-to-text**
-
-The browser module's createBackendData() JSON includes transcript, speaking_time, words_per_minute, pause_count, and filler_word_count. The adapter maps speaking_time to the API field speaking_time_seconds. The value is expected to be seconds.
-
-**Member 2 — Computer vision**
-
-The Python CVAnalyzer.summary() output contains nested eye_contact, posture, gestures, and confidence objects. The adapter maps eye_contact.eye_contact_pct, eye_contact.face_detected_pct, posture.avg_posture_score, and movement-related values into the dashboard's numeric fields. The full nested source report is preserved under cv_module_report.
-
-The current CV module reports several movement percentages, not one native movement score. For dashboard compatibility, movement_score is a clearly-labelled proxy derived from fidgeting and face-touch percentages. It should be reviewed with the team before being treated as a comparable performance score.
-
-**Member 3 — NLP / content analysis**
-
-The output from build_analysis_result(text, topic) includes content_score, suggestions, and detailed analysis. The adapter maps suggestions to content_suggestions and uses content_score as the report's content score. Detailed source output remains available in **Report data**.
-
-**Important limitation:** JSON import connects the outputs; it does not automatically start the microphone or webcam, and it does not run the NLP analyzer for you. The teammate modules must be run separately to generate real outputs. A later integration can have each module submit results directly to the API.
+## Project layout
+```text
+index.html                  Landing page and team profile links
+speech_to_text/             Browser speech analysis
+computer_vision/             Webcam analyzer and model downloader
+NLP/                         Content analysis and feedback generation
+backend/app.py               Flask API, session storage and NLP integration
+backend/module_adapters.py   Normalize module result formats
+dashboard/app.py             Combined Streamlit report
+tests/                       Adapter and integration tests
+sample_data/                 Example JSON payloads
+data/                        Local database and CV report
+```
 
 ## API endpoints
-
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | / | Backend information |
-| GET | /api/health | Check whether the API is running |
-| POST | /api/sessions | Create a session, optionally with module results |
-| GET | /api/sessions | List up to 100 recent sessions |
-| GET | /api/sessions/<session_id> | Retrieve one report |
-| PATCH | /api/sessions/<session_id> | Merge results from one or more modules and recalculate scores |
+| GET | / | Landing page |
+| GET | /speech/ | Speech UI |
+| GET | /api/health | Health check |
+| POST | /api/sessions | Create session |
+| GET | /api/sessions | List reports |
+| GET | /api/sessions/<session_id> | Retrieve report |
+| PATCH | /api/sessions/<session_id> | Attach module results to existing session |
 
-### API payload format
-
-Create a session with POST http://127.0.0.1:5000/api/sessions:
-
-~~~json
-{
-  "presenter_name": "Jessika",
-  "topic": "Cybersecurity Awareness",
-  "speech": {
-    "transcript": "Today I will discuss safe passwords.",
-    "speaking_time_seconds": 30,
-    "words_per_minute": 100,
-    "pause_count": 2,
-    "filler_word_count": 1
-  },
-  "computer_vision": {
-    "face_visibility": 90,
-    "eye_contact": 75,
-    "posture_score": 85,
-    "movement_score": 80
-  },
-  "nlp": {
-    "keyword_score": 80,
-    "content_relevance": 88,
-    "vocabulary_score": 75,
-    "repetition_score": 90,
-    "content_suggestions": ["Add one real-world example."]
-  }
-}
-~~~
-
-Modules can also submit results individually using PATCH and the same session ID. The top-level keys are speech, computer_vision, and nlp.
-
-## Score definitions
-
-- Speech score: averages the available speaking-pace heuristic and filler words per 100 transcript words.
-- Computer-vision score: average of the available normalized computer-vision fields.
-- NLP score: uses the native content_score when provided; otherwise, averages available NLP component scores.
-- Overall score: average of the available category scores. Missing modules are not counted as zero.
-- Pause count and speaking duration are displayed but not included in the score.
-
-Treat the overall number as a **starter score**, not a scientifically validated rating. Review scoring weights and the computer-vision movement proxy with the team.
-
-## Run integration tests
-
-From the project root in PowerShell:
-
-~~~powershell
-python -m unittest discover -s tests -v
-~~~
-
-These tests check the field mapping for the three teammate output formats. They do not start the camera, microphone, or a live presentation.
-
-## Troubleshooting
-
-- If the dashboard cannot connect, keep the Flask backend running in a separate PowerShell window.
-- The default backend address is http://127.0.0.1:5000.
-- The local SQLite database is created automatically under data/; do not commit it to Git.
+Run tests with `python -m unittest discover -s tests -v`.
