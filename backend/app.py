@@ -15,12 +15,17 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 
 from module_adapters import normalize_module_payload
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+import sys
+sys.path.insert(0, str(BASE_DIR / "NLP"))
+from feedback_generator import build_analysis_result
+
 DB_PATH = Path(os.environ.get("PRESENTATION_COACH_DB", BASE_DIR / "data" / "presentation_sessions.db"))
+SPEECH_DIR = BASE_DIR / "speech_to_text"
 
 app = Flask(__name__)
 
@@ -169,13 +174,22 @@ def row_to_session(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+@app.get("/speech/")
+def speech_module():
+    """Serve the browser speech-to-text page."""
+    return send_from_directory(SPEECH_DIR, "index.html")
+
+
+@app.get("/speech/<path:filename>")
+def speech_assets(filename: str):
+    """Serve speech page CSS and JavaScript."""
+    return send_from_directory(SPEECH_DIR, filename)
+
+
 @app.get("/")
 def home():
-    return jsonify({
-        "project": "AI Presentation Coach",
-        "message": "Backend is running. Open /api/health to check its status.",
-        "endpoints": ["/api/health", "/api/sessions"],
-    })
+    """Serve the integrated project landing page."""
+    return send_from_directory(BASE_DIR, "index.html")
 
 
 @app.get("/api/health")
@@ -198,6 +212,10 @@ def create_session():
 
     try:
         modules = {name: validate_module(name, payload.get(name, {})) for name in MODULES}
+        transcript = modules["speech"].get("transcript", "")
+        if isinstance(transcript, str) and transcript.strip() and not modules["nlp"].get("content_score"):
+            # Analyze the speech transcript so NLP is saved in the same session.
+            modules["nlp"].update(build_analysis_result(transcript, topic))
         scores = calculate_scores(modules["speech"], modules["computer_vision"], modules["nlp"])
     except ValueError as error:
         return jsonify({"error": str(error)}), 400

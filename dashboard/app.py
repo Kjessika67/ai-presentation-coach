@@ -27,30 +27,25 @@ st.title("🎤 AI Presentation Coach")
 
 st.caption("One report for speech, body language, and presentation content.")
 
-with st.expander("Import real module JSON files", expanded=False):
-    st.caption(
-        "Upload the JSON files exported by the completed modules. Select all available module files "
-        "for this presentation before clicking to create one combined report."
-    )
-    import_name = st.text_input("Presenter name", value="Jessika", key="import_presenter_name")
-    import_topic = st.text_input("Presentation topic", value="", key="import_presentation_topic")
+with st.expander("Import or attach module results", expanded=False):
+    st.caption("Upload JSON outputs from the three modules. To keep one report, attach later results to the Session ID created by Speech Analysis.")
+    import_mode = st.radio("How should these results be saved?", ("Create a new combined report", "Attach to an existing session ID"), horizontal=True, key="import_mode")
+    if import_mode == "Attach to an existing session ID":
+        existing_session_id = st.text_input("Existing Session ID (from Speech Analysis success message)", key="import_existing_session_id", placeholder="Paste the session UUID").strip()
+        st.caption("This merges results into the selected report and preserves its other modules.")
+    else:
+        existing_session_id = ""
+        import_name = st.text_input("Presenter name", value="Jessika", key="import_presenter_name")
+        import_topic = st.text_input("Presentation topic", value="", key="import_presentation_topic")
     speech_json_file = st.file_uploader("Speech module JSON", type=["json"], key="import_speech_json")
     cv_json_file = st.file_uploader("Computer-vision module JSON", type=["json"], key="import_cv_json")
     nlp_json_file = st.file_uploader("NLP module JSON", type=["json"], key="import_nlp_json")
-    import_clicked = st.button(
-        "Create report from uploaded JSON",
-        key="create_imported_report",
-        use_container_width=True,
-    )
+    import_clicked = st.button("Attach results to this session" if import_mode == "Attach to an existing session ID" else "Create one combined report", key="create_imported_report", use_container_width=True)
 
 if import_clicked:
     uploaded_modules = {}
     import_errors = []
-    for module_name, uploaded_file in (
-        ("speech", speech_json_file),
-        ("computer_vision", cv_json_file),
-        ("nlp", nlp_json_file),
-    ):
+    for module_name, uploaded_file in (("speech", speech_json_file), ("computer_vision", cv_json_file), ("nlp", nlp_json_file)):
         if uploaded_file is None:
             continue
         try:
@@ -61,30 +56,31 @@ if import_clicked:
                 uploaded_modules[module_name] = parsed
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             import_errors.append(f"Could not read {uploaded_file.name} as JSON: {exc}")
-
     if import_errors:
         for import_error in import_errors:
             st.error(import_error)
     elif not uploaded_modules:
         st.warning("Upload at least one module JSON file first.")
+    elif import_mode == "Attach to an existing session ID" and not existing_session_id:
+        st.warning("Paste the existing Session ID. Do not create a new report if you want one combined session.")
     else:
-        import_payload = {
-            "presenter_name": import_name.strip() or "Presenter",
-            "topic": import_topic.strip() or "Untitled presentation",
-            **uploaded_modules,
-        }
         try:
             import_api_url = st.session_state.get("backend_api_url", DEFAULT_API_URL).strip().rstrip("/")
-            response = requests.post(
-                f"{import_api_url}/api/sessions",
-                json=import_payload,
-                timeout=15,
-            )
-            response.raise_for_status()
-            st.success("Report imported successfully.")
+            if import_mode == "Attach to an existing session ID":
+                response = requests.patch(f"{import_api_url}/api/sessions/{existing_session_id}", json=uploaded_modules, timeout=15)
+                response.raise_for_status()
+                updated_session = response.json().get("session", {})
+                st.success(f"Results attached to the existing report. Session ID: {updated_session.get('id', existing_session_id)}")
+            else:
+                payload = {"presenter_name": import_name.strip() or "Presenter", "topic": import_topic.strip() or "Untitled presentation", **uploaded_modules}
+                response = requests.post(f"{import_api_url}/api/sessions", json=payload, timeout=15)
+                response.raise_for_status()
+                created_session = response.json().get("session", {})
+                st.success(f"Combined report created. Session ID: {created_session.get('id', 'created')}")
             st.rerun()
         except requests.RequestException as exc:
-            st.error(f"Could not import the module report: {exc}")
+            details = exc.response.text if isinstance(exc, requests.HTTPError) and exc.response is not None else str(exc)
+            st.error(f"Could not save module results: {details}")
 
 with st.sidebar:
     st.header("Backend connection")
